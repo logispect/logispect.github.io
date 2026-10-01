@@ -1,0 +1,11 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Design exploration (not shipped)
+design-home.html
+design-variants.html
+mockup-preview.html
