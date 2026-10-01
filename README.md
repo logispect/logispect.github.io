@@ -26,5 +26,5 @@
 ## 汇率转换说明
 
 - 金额换算在本地完成；仅拉取公开汇率表
-- 汇率来源：[Frankfurter](https://www.frankfurter.app/)（欧央行参考汇率）
-- 表缓存于 `localStorage`，默认 12 小时内复用
+- 数据源优先：jsDelivr（currency-api）→ open.er-api → Frankfurter
+- 表缓存于 `localStorage`，默认 12 小时内复用；拿不到汇率则不换算
