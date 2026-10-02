@@ -2,21 +2,25 @@
 
 本地运行的小工具合集。浏览器内完成计算，不上传敏感数据。
 
-## 页面
+## 结构
 
-| 入口 | 说明 |
-|------|------|
-| `index.html` | 首页 + 全部工具（hash 同页切换） |
-| `index.html#tool-password` | 密码生成器 |
-| `index.html#tool-json` | JSON 格式化 / 校验 / 压缩 |
-| `index.html#tool-currency` | 汇率转换（Frankfurter + localStorage 缓存） |
-| `password-generator.html` | 跳转到 `#tool-password` |
+```
+index.html                 ← 首页目录
+css/app.css                ← 共用样式
+tools/password.html        ← 密码生成器
+tools/json.html            ← JSON 格式化
+tools/currency.html        ← 汇率转换
+tools/timestamp.html       ← 时间戳互转
+ads.txt
+```
 
-路由统一前缀 `tool-`，例如 `#tool-json`，避免裸 `#json` 等歧义。
+旧链接 `#tool-password` / `#tool-json` / `#tool-currency` / `#tool-timestamp` 会在首页自动跳到对应工具页。
 
 ## 本地打开
 
 双击 `index.html`，或用任意静态服务器打开项目根目录。
+
+汇率工具若用 `file://` 打开可能无法请求外网接口，建议用本地服务器，或访问已部署站点。
 
 ## 设计
 

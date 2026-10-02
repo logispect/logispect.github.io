@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="本地格式化、压缩与语法校验，数据不离开浏览器。" />
+  <title>Tool Haven — JSON Formatter</title>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4072143748973107"
+     crossorigin="anonymous"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/app.css" />
+</head>
+<body>
+  <div class="shell shell--tool-wide">
+    <header class="tool-hero">
+      <a class="back-link" href="../index.html">← 返回首页</a>
+      <h1>JSON Formatter</h1>
+      <p>本地格式化、压缩与语法校验，数据不离开浏览器。</p>
+    </header>
+
+    <main aria-labelledby="json-heading">
+      <h2 id="json-heading" class="visually-hidden">JSON 格式化</h2>
+      <div class="json-status" id="jsonStatus" data-state="idle" aria-live="polite">
+        <span class="json-status-msg" id="jsonStatusMsg">请输入 JSON</span>
+      </div>
+      <label class="visually-hidden" for="jsonInput">JSON 内容</label>
+      <textarea id="jsonInput" spellcheck="false" placeholder='在此粘贴 JSON… 例如 {"hello":"world"}'></textarea>
+      <div class="json-actions">
+        <button type="button" class="btn btn-ghost" id="jsonValidateBtn">校验</button>
+        <button type="button" class="btn btn-ghost" id="jsonFormatBtn">格式化</button>
+        <button type="button" class="btn btn-ghost" id="jsonMinifyBtn">压缩</button>
+        <button type="button" class="btn btn-ghost" id="jsonCopyBtn">复制</button>
+        <button type="button" class="btn btn-ghost" id="jsonClearBtn">清空</button>
+      </div>
+      <p class="hint">仅支持标准 JSON（双引号、无尾逗号）。使用 <code>JSON.parse</code> 本地校验。</p>
+    </main>
+
+    <section class="faq">
+      <h2>常见问题</h2>
+      <details>
+        <summary>数据会上传吗？</summary>
+        <p>不会。解析与格式化都在浏览器本地完成。</p>
+      </details>
+      <details>
+        <summary>为什么单引号或尾逗号算非法？</summary>
+        <p>那是 JavaScript 对象写法，不是标准 JSON。接口与多数配置只接受标准 JSON。</p>
+      </details>
+      <details>
+        <summary>空白算不算非法？</summary>
+        <p>仅空白视为未输入，显示「请输入 JSON」，不报非法。</p>
+      </details>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      var input = document.getElementById("jsonInput");
+      var statusEl = document.getElementById("jsonStatus");
+      var statusMsg = document.getElementById("jsonStatusMsg");
+      var validateBtn = document.getElementById("jsonValidateBtn");
+      var formatBtn = document.getElementById("jsonFormatBtn");
+      var minifyBtn = document.getElementById("jsonMinifyBtn");
+      var copyBtn = document.getElementById("jsonCopyBtn");
+      var clearBtn = document.getElementById("jsonClearBtn");
+      var actionBtns = [validateBtn, formatBtn, minifyBtn, copyBtn, clearBtn];
+      var debounceTimer = null;
+      var copyResetTimer = null;
+
+      function setActiveAction(activeBtn) {
+        actionBtns.forEach(function (btn) {
+          var on = btn === activeBtn;
+          btn.classList.toggle("btn-primary", on);
+          btn.classList.toggle("btn-ghost", !on);
+        });
+      }
+      function truncate(text, max) {
+        if (!text) return "";
+        text = String(text);
+        return text.length > max ? text.slice(0, max - 1) + "…" : text;
+      }
+      function setStatus(state, message) {
+        statusEl.setAttribute("data-state", state);
+        statusMsg.textContent = message;
+      }
+      function parseInput() {
+        var raw = input.value;
+        if (!raw.trim()) return { ok: false, empty: true };
+        try {
+          return { ok: true, empty: false, value: JSON.parse(raw) };
+        } catch (err) {
+          return {
+            ok: false,
+            empty: false,
+            error: truncate(err && err.message ? err.message : "解析失败", 120)
+          };
+        }
+      }
+      function validate() {
+        var result = parseInput();
+        if (result.empty) {
+          setStatus("idle", "请输入 JSON");
+          return result;
+        }
+        if (result.ok) setStatus("ok", "合法 JSON");
+        else setStatus("bad", "非法 JSON：" + result.error);
+        return result;
+      }
+      function onFormat() {
+        var result = parseInput();
+        if (result.empty) { setStatus("idle", "请输入 JSON"); return; }
+        if (!result.ok) {
+          setStatus("bad", "非法 JSON：" + result.error + "（请先修复后再格式化）");
+          return;
+        }
+        input.value = JSON.stringify(result.value, null, 2);
+        setStatus("ok", "已格式化 · 合法 JSON");
+      }
+      function onMinify() {
+        var result = parseInput();
+        if (result.empty) { setStatus("idle", "请输入 JSON"); return; }
+        if (!result.ok) {
+          setStatus("bad", "非法 JSON：" + result.error + "（请先修复后再压缩）");
+          return;
+        }
+        input.value = JSON.stringify(result.value);
+        setStatus("ok", "已压缩 · 合法 JSON");
+      }
+      async function onCopy() {
+        var value = input.value;
+        if (!value) { setStatus("idle", "没有可复制的内容"); return; }
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(value);
+          } else {
+            input.focus();
+            input.select();
+            if (!document.execCommand("copy")) throw new Error("copy failed");
+          }
+          var prev = copyBtn.textContent;
+          copyBtn.textContent = "已复制";
+          copyBtn.classList.add("is-success");
+          clearTimeout(copyResetTimer);
+          copyResetTimer = setTimeout(function () {
+            copyBtn.textContent = prev;
+            copyBtn.classList.remove("is-success");
+          }, 1600);
+          validate();
+        } catch (_) {
+          setStatus("bad", "复制失败，请手动选择内容复制");
+        }
+      }
+      function onClear() {
+        input.value = "";
+        setStatus("idle", "请输入 JSON");
+        input.focus();
+      }
+      function scheduleValidate() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(validate, 300);
+      }
+      validateBtn.addEventListener("click", function () { setActiveAction(validateBtn); validate(); });
+      formatBtn.addEventListener("click", function () { setActiveAction(formatBtn); onFormat(); });
+      minifyBtn.addEventListener("click", function () { setActiveAction(minifyBtn); onMinify(); });
+      copyBtn.addEventListener("click", function () { setActiveAction(copyBtn); onCopy(); });
+      clearBtn.addEventListener("click", function () { setActiveAction(clearBtn); onClear(); });
+      input.addEventListener("input", scheduleValidate);
+      validate();
+    })();
+  </script>
+</body>
+</html>

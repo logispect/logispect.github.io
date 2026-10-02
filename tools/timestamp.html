@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="本地时间戳与日期互转，按所选时区换算，数据不离开浏览器。" />
+  <title>Tool Haven — Timestamp Converter</title>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4072143748973107"
+     crossorigin="anonymous"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/app.css" />
+</head>
+<body>
+  <div class="shell shell--tool">
+    <header class="tool-hero">
+      <a class="back-link" href="../index.html">← 返回首页</a>
+      <h1>Timestamp Converter</h1>
+      <p>选时区后，上方时间戳与下方日期互相换算。</p>
+    </header>
+
+    <main aria-labelledby="ts-heading">
+      <h2 id="ts-heading" class="visually-hidden">时间戳互转</h2>
+
+      <div class="controls">
+        <div class="control ts-tz">
+          <div class="control-label"><span>时区</span></div>
+          <div class="ts-tz-row">
+            <label class="visually-hidden" for="tz">时区</label>
+            <select id="tz" aria-label="时区"></select>
+            <button type="button" class="btn btn-ghost" id="tzLocalBtn">上海</button>
+            <button type="button" class="btn btn-ghost" id="tzUtcBtn">UTC</button>
+          </div>
+        </div>
+
+        <div class="control">
+          <div class="control-label"><span>时间戳</span></div>
+          <div class="output-row ts-input-row">
+            <label class="visually-hidden" for="tsInput">Unix 时间戳</label>
+            <input id="tsInput" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="时间戳" />
+            <label class="visually-hidden" for="tsUnit">单位</label>
+            <select id="tsUnit" aria-label="时间戳单位">
+              <option value="s" selected>秒</option>
+              <option value="ms">毫秒</option>
+            </select>
+            <button type="button" class="btn btn-ghost" id="nowBtn">Now</button>
+          </div>
+          <p class="error" id="tsError" role="alert"></p>
+        </div>
+
+        <div class="ts-swap" aria-hidden="true">⇄ 互转</div>
+
+        <div class="control">
+          <div class="control-label"><span>日期时间</span><span class="ts-tz-tag" id="tzTag"></span></div>
+          <div class="ts-date-grid">
+            <label class="ts-field"><span>年</span><input id="y" type="number" inputmode="numeric" min="1970" max="9999" /></label>
+            <label class="ts-field"><span>月</span><input id="mo" type="number" inputmode="numeric" min="1" max="12" /></label>
+            <label class="ts-field"><span>日</span><input id="d" type="number" inputmode="numeric" min="1" max="31" /></label>
+            <label class="ts-field"><span>时</span><input id="h" type="number" inputmode="numeric" min="0" max="23" /></label>
+            <label class="ts-field"><span>分</span><input id="mi" type="number" inputmode="numeric" min="0" max="59" /></label>
+            <label class="ts-field"><span>秒</span><input id="s" type="number" inputmode="numeric" min="0" max="59" /></label>
+          </div>
+          <p class="error" id="dateError" role="alert"></p>
+        </div>
+      </div>
+
+      <p class="hint">改时间戳会更新日期；改日期会更新时间戳。均按所选时区换算。</p>
+    </main>
+
+    <section class="faq">
+      <h2>常见问题</h2>
+      <details>
+        <summary>数据会上传吗？</summary>
+        <p>不会。解析与时区换算都在你的浏览器本地完成。</p>
+      </details>
+      <details>
+        <summary>时区怎么作用？</summary>
+        <p>时间戳是绝对时刻；下方日期按所选时区解读与显示。两者中间的「互转」表示改一侧会同步另一侧。</p>
+      </details>
+      <details>
+        <summary>秒和毫秒怎么选？</summary>
+        <p>默认是秒。需要毫秒时间戳时，在输入框旁切换为「毫秒」即可。</p>
+      </details>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      var TZ_LABELS = {
+        UTC: "UTC",
+        "Asia/Shanghai": "上海",
+        "Asia/Hong_Kong": "香港",
+        "Asia/Taipei": "台北",
+        "Asia/Tokyo": "东京",
+        "Asia/Seoul": "首尔",
+        "Asia/Singapore": "新加坡",
+        "Asia/Bangkok": "曼谷",
+        "Asia/Kolkata": "加尔各答",
+        "Asia/Dubai": "迪拜",
+        "Europe/London": "伦敦",
+        "Europe/Paris": "巴黎",
+        "Europe/Berlin": "柏林",
+        "Europe/Moscow": "莫斯科",
+        "America/New_York": "纽约",
+        "America/Chicago": "芝加哥",
+        "America/Denver": "丹佛",
+        "America/Los_Angeles": "洛杉矶",
+        "America/Sao_Paulo": "圣保罗",
+        "America/Toronto": "多伦多",
+        "Australia/Sydney": "悉尼",
+        "Pacific/Auckland": "奥克兰"
+      };
+
+      function tzShortLabel(z) {
+        if (TZ_LABELS[z]) return TZ_LABELS[z];
+        var city = String(z || "").split("/").pop() || z;
+        return city.replace(/_/g, " ");
+      }
+
+      var localTz = (function () {
+        try {
+          return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+        } catch (e) {
+          return "UTC";
+        }
+      })();
+
+      var tzSelect = document.getElementById("tz");
+      var tzLocalBtn = document.getElementById("tzLocalBtn");
+      var tzUtcBtn = document.getElementById("tzUtcBtn");
+      var tzTag = document.getElementById("tzTag");
+      var tsInput = document.getElementById("tsInput");
+      var tsUnit = document.getElementById("tsUnit");
+      var nowBtn = document.getElementById("nowBtn");
+      var tsError = document.getElementById("tsError");
+      var dateError = document.getElementById("dateError");
+      var fields = {
+        y: document.getElementById("y"),
+        mo: document.getElementById("mo"),
+        d: document.getElementById("d"),
+        h: document.getElementById("h"),
+        mi: document.getElementById("mi"),
+        s: document.getElementById("s")
+      };
+
+      var editing = null;
+      var lastMs = null;
+      var debounceTimer = null;
+
+      function uniqTzList() {
+        var seen = {};
+        var list = [];
+        function add(z) {
+          if (!z || seen[z]) return;
+          seen[z] = true;
+          list.push(z);
+        }
+        add(localTz);
+        Object.keys(TZ_LABELS).forEach(add);
+        return list;
+      }
+
+      function updateTzChrome() {
+        var z = tzSelect.value || "UTC";
+        tzLocalBtn.textContent = tzShortLabel(localTz);
+        tzTag.textContent = "按 " + tzShortLabel(z) + " 解读";
+      }
+
+      function fillTzSelect() {
+        var list = uniqTzList();
+        tzSelect.innerHTML = "";
+        list.forEach(function (z) {
+          var opt = document.createElement("option");
+          opt.value = z;
+          opt.textContent = tzShortLabel(z) + " · " + z;
+          tzSelect.appendChild(opt);
+        });
+        tzSelect.value = localTz;
+        updateTzChrome();
+      }
+
+      function getTzParts(ms, timeZone) {
+        var dtf = new Intl.DateTimeFormat("en-US", {
+          timeZone: timeZone,
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hourCycle: "h23"
+        });
+        var map = {};
+        dtf.formatToParts(new Date(ms)).forEach(function (p) {
+          if (p.type !== "literal") map[p.type] = p.value;
+        });
+        var hour = parseInt(map.hour, 10);
+        if (hour === 24) hour = 0;
+        return {
+          year: parseInt(map.year, 10),
+          month: parseInt(map.month, 10),
+          day: parseInt(map.day, 10),
+          hour: hour,
+          minute: parseInt(map.minute, 10),
+          second: parseInt(map.second, 10)
+        };
+      }
+
+      function tzOffsetMs(utcMs, timeZone) {
+        var p = getTzParts(utcMs, timeZone);
+        var asUtc = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+        return asUtc - utcMs;
+      }
+
+      function zonedWallToUtcMs(y, mo, d, h, mi, s, timeZone) {
+        var guess = Date.UTC(y, mo - 1, d, h, mi, s);
+        var offset = tzOffsetMs(guess, timeZone);
+        var utc = guess - offset;
+        var offset2 = tzOffsetMs(utc, timeZone);
+        if (offset2 !== offset) utc = guess - offset2;
+        var check = getTzParts(utc, timeZone);
+        if (
+          check.year !== y ||
+          check.month !== mo ||
+          check.day !== d ||
+          check.hour !== h ||
+          check.minute !== mi ||
+          check.second !== s
+        ) {
+          return null;
+        }
+        return utc;
+      }
+
+      function isMsUnit() {
+        return tsUnit.value === "ms";
+      }
+
+      function formatTsValue(ms) {
+        return isMsUnit() ? String(ms) : String(Math.floor(ms / 1000));
+      }
+
+      function parseTimestamp(raw) {
+        var text = String(raw || "").trim();
+        if (!text) return { ok: false, empty: true };
+        if (!/^-?\d+(\.\d+)?$/.test(text)) {
+          return { ok: false, message: "请输入有效的数字时间戳" };
+        }
+        var num = Number(text);
+        if (!isFinite(num)) return { ok: false, message: "请输入有效的数字时间戳" };
+        var ms = isMsUnit() ? Math.trunc(num) : Math.round(num * 1000);
+        if (isNaN(new Date(ms).getTime())) return { ok: false, message: "时间戳超出可表示范围" };
+        return { ok: true, ms: ms };
+      }
+
+      function setError(el, msg) {
+        if (msg) {
+          el.textContent = msg;
+          el.classList.add("is-visible");
+        } else {
+          el.textContent = "";
+          el.classList.remove("is-visible");
+        }
+      }
+
+      function setDateFields(parts) {
+        fields.y.value = parts.year;
+        fields.mo.value = parts.month;
+        fields.d.value = parts.day;
+        fields.h.value = parts.hour;
+        fields.mi.value = parts.minute;
+        fields.s.value = parts.second;
+      }
+
+      function readDateFields() {
+        var y = parseInt(fields.y.value, 10);
+        var mo = parseInt(fields.mo.value, 10);
+        var d = parseInt(fields.d.value, 10);
+        var h = parseInt(fields.h.value, 10);
+        var mi = parseInt(fields.mi.value, 10);
+        var s = parseInt(fields.s.value, 10);
+        if ([y, mo, d, h, mi, s].some(function (n) { return !isFinite(n); })) {
+          return { ok: false, message: "请填写完整的日期时间" };
+        }
+        if (mo < 1 || mo > 12 || d < 1 || d > 31 || h < 0 || h > 23 || mi < 0 || mi > 59 || s < 0 || s > 59) {
+          return { ok: false, message: "日期时间字段超出范围" };
+        }
+        return { ok: true, y: y, mo: mo, d: d, h: h, mi: mi, s: s };
+      }
+
+      function applyFromMs(ms, source) {
+        lastMs = ms;
+        var tz = tzSelect.value || "UTC";
+        var zoned = getTzParts(ms, tz);
+
+        if (source === "ts" || source === "now" || source === "tz") {
+          editing = "ts";
+          setDateFields(zoned);
+          editing = null;
+        }
+        if (source === "date" || source === "now" || source === "unit") {
+          editing = "date";
+          tsInput.value = formatTsValue(ms);
+          editing = null;
+        }
+
+        setError(tsError, "");
+        setError(dateError, "");
+      }
+
+      function syncFromTimestamp() {
+        if (editing === "date") return;
+        var parsed = parseTimestamp(tsInput.value);
+        if (parsed.empty) {
+          setError(tsError, "");
+          lastMs = null;
+          return;
+        }
+        if (!parsed.ok) {
+          setError(tsError, parsed.message);
+          lastMs = null;
+          return;
+        }
+        applyFromMs(parsed.ms, "ts");
+      }
+
+      function syncFromDate() {
+        if (editing === "ts") return;
+        var read = readDateFields();
+        if (!read.ok) {
+          setError(dateError, read.message);
+          return;
+        }
+        var tz = tzSelect.value || "UTC";
+        var ms = zonedWallToUtcMs(read.y, read.mo, read.d, read.h, read.mi, read.s, tz);
+        if (ms === null || isNaN(ms)) {
+          setError(dateError, "无法在该时区解析该日期（可能落在夏令时空隙）");
+          return;
+        }
+        applyFromMs(ms, "date");
+      }
+
+      function schedule(fn) {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(fn, 100);
+      }
+
+      fillTzSelect();
+
+      nowBtn.addEventListener("click", function () {
+        editing = null;
+        applyFromMs(Date.now(), "now");
+      });
+
+      function refreshTz() {
+        updateTzChrome();
+        if (lastMs != null) applyFromMs(lastMs, "tz");
+        else if (tsInput.value.trim()) syncFromTimestamp();
+        else syncFromDate();
+      }
+
+      tzLocalBtn.addEventListener("click", function () {
+        tzSelect.value = localTz;
+        refreshTz();
+      });
+
+      tzUtcBtn.addEventListener("click", function () {
+        tzSelect.value = "UTC";
+        refreshTz();
+      });
+
+      tzSelect.addEventListener("change", refreshTz);
+
+      tsUnit.addEventListener("change", function () {
+        if (lastMs != null) applyFromMs(lastMs, "unit");
+        else if (tsInput.value.trim()) syncFromTimestamp();
+      });
+
+      tsInput.addEventListener("input", function () {
+        schedule(syncFromTimestamp);
+      });
+
+      Object.keys(fields).forEach(function (key) {
+        fields[key].addEventListener("input", function () {
+          schedule(syncFromDate);
+        });
+      });
+
+      applyFromMs(Date.now(), "now");
+    })();
+  </script>
+</body>
+</html>
