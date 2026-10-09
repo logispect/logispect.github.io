@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="本地二、八、十、十六进制互转，数据不离开浏览器。" />
+  <title>Tool Haven — Base Converter</title>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4072143748973107"
+     crossorigin="anonymous"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/app.css" />
+</head>
+<body>
+  <div class="shell shell--tool">
+    <header class="tool-hero">
+      <a class="back-link" href="../index.html">← 返回首页</a>
+      <h1>Base Converter</h1>
+      <p>二、八、十、十六进制互转，数据不离开浏览器。</p>
+    </header>
+
+    <main aria-labelledby="base-heading">
+      <h2 id="base-heading" class="visually-hidden">进制转换</h2>
+
+      <div class="fx-panel">
+        <div class="fx-row base-fx-row">
+          <label class="visually-hidden" for="baseFrom">源数值</label>
+          <input id="baseFrom" type="text" autocomplete="off" spellcheck="false" placeholder="输入数值" />
+          <label class="visually-hidden" for="radixFrom">源进制</label>
+          <select id="radixFrom" aria-label="源进制"></select>
+        </div>
+        <div class="fx-swap-wrap">
+          <button type="button" class="btn btn-ghost" id="baseSwapBtn" aria-label="互换进制">⇄ 互换</button>
+        </div>
+        <div class="fx-row base-fx-row">
+          <label class="visually-hidden" for="baseTo">目标数值</label>
+          <input id="baseTo" type="text" autocomplete="off" spellcheck="false" placeholder="转换结果" />
+          <label class="visually-hidden" for="radixTo">目标进制</label>
+          <select id="radixTo" aria-label="目标进制"></select>
+        </div>
+      </div>
+
+      <p class="error" id="baseError" role="alert"></p>
+      <div class="fx-actions">
+        <button type="button" class="btn btn-ghost" id="baseCopyBtn">复制结果</button>
+        <button type="button" class="btn btn-ghost" id="baseClearBtn">清空</button>
+      </div>
+      <p class="hint">默认十进制 → 十六进制。改任一端会同步另一端；十六进制输出为大写。</p>
+    </main>
+
+    <section class="faq">
+      <h2>常见问题</h2>
+      <details>
+        <summary>数据会上传吗？</summary>
+        <p>不会。换算都在浏览器本地完成。</p>
+      </details>
+      <details>
+        <summary>支持哪些进制？</summary>
+        <p>可选二进制、八进制、十进制、十六进制。十六进制字母 <code>A–F</code> 大小写均可输入，输出为大写。</p>
+      </details>
+      <details>
+        <summary>支持负数或小数吗？</summary>
+        <p>仅支持非负整数。</p>
+      </details>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      var DIGITS = "0123456789ABCDEF";
+      var RADIX_OPTIONS = [
+        { value: 2, label: "二进制" },
+        { value: 8, label: "八进制" },
+        { value: 10, label: "十进制" },
+        { value: 16, label: "十六进制" }
+      ];
+      var fromInput = document.getElementById("baseFrom");
+      var toInput = document.getElementById("baseTo");
+      var radixFrom = document.getElementById("radixFrom");
+      var radixTo = document.getElementById("radixTo");
+      var errorEl = document.getElementById("baseError");
+      var swapBtn = document.getElementById("baseSwapBtn");
+      var copyBtn = document.getElementById("baseCopyBtn");
+      var clearBtn = document.getElementById("baseClearBtn");
+      var syncing = false;
+      var timer = null;
+      var lastSide = "from";
+
+      function fillRadix(select, selected) {
+        RADIX_OPTIONS.forEach(function (item) {
+          var opt = document.createElement("option");
+          opt.value = String(item.value);
+          opt.textContent = item.label;
+          if (item.value === selected) opt.selected = true;
+          select.appendChild(opt);
+        });
+      }
+      fillRadix(radixFrom, 10);
+      fillRadix(radixTo, 16);
+
+      function digitValue(ch) {
+        return DIGITS.indexOf(ch.toUpperCase());
+      }
+
+      function parseValue(raw, radix) {
+        var body = String(raw || "").trim().replace(/\s+/g, "");
+        if (!body) return { empty: true };
+        if (body.charAt(0) === "-") return { ok: false, error: "暂不支持负数" };
+        if ([2, 8, 10, 16].indexOf(radix) === -1) return { ok: false, error: "请选择有效进制" };
+
+        var value = 0n;
+        var base = BigInt(radix);
+        for (var i = 0; i < body.length; i++) {
+          var ch = body.charAt(i);
+          if (ch === "_") continue;
+          var d = digitValue(ch);
+          if (d < 0 || d >= radix) {
+            return { ok: false, error: "含非法字符「" + ch + "」" };
+          }
+          value = value * base + BigInt(d);
+        }
+        return { ok: true, value: value };
+      }
+
+      function formatValue(value, radix) {
+        if (value === 0n) return "0";
+        var base = BigInt(radix);
+        var out = "";
+        var n = value;
+        while (n > 0n) {
+          out = DIGITS.charAt(Number(n % base)) + out;
+          n = n / base;
+        }
+        return out;
+      }
+
+      function setError(msg) {
+        errorEl.textContent = msg || "";
+        errorEl.classList.toggle("is-visible", !!msg);
+      }
+
+      function convert(side) {
+        var src = side === "from" ? fromInput : toInput;
+        var dst = side === "from" ? toInput : fromInput;
+        var srcRadix = parseInt((side === "from" ? radixFrom : radixTo).value, 10);
+        var dstRadix = parseInt((side === "from" ? radixTo : radixFrom).value, 10);
+        var parsed = parseValue(src.value, srcRadix);
+        if (parsed.empty) {
+          syncing = true;
+          dst.value = "";
+          syncing = false;
+          setError("");
+          return;
+        }
+        if (!parsed.ok) {
+          setError(parsed.error);
+          return;
+        }
+        syncing = true;
+        dst.value = formatValue(parsed.value, dstRadix);
+        syncing = false;
+        setError("");
+      }
+
+      function schedule(side) {
+        lastSide = side;
+        clearTimeout(timer);
+        timer = setTimeout(function () { convert(side); }, 120);
+      }
+
+      fromInput.addEventListener("input", function () {
+        if (!syncing) schedule("from");
+      });
+      toInput.addEventListener("input", function () {
+        if (!syncing) schedule("to");
+      });
+
+      function onRadixChange() {
+        convert(lastSide === "to" && toInput.value.trim() ? "to" : "from");
+      }
+      radixFrom.addEventListener("change", onRadixChange);
+      radixTo.addEventListener("change", onRadixChange);
+
+      swapBtn.addEventListener("click", function () {
+        var a = radixFrom.value;
+        radixFrom.value = radixTo.value;
+        radixTo.value = a;
+        var t = fromInput.value;
+        fromInput.value = toInput.value;
+        toInput.value = t;
+        setError("");
+      });
+
+      clearBtn.addEventListener("click", function () {
+        syncing = true;
+        fromInput.value = "";
+        toInput.value = "";
+        syncing = false;
+        setError("");
+      });
+
+      var copyReset = null;
+      copyBtn.addEventListener("click", function () {
+        var text = toInput.value;
+        if (!text) return;
+        function done() {
+          copyBtn.textContent = "已复制";
+          clearTimeout(copyReset);
+          copyReset = setTimeout(function () { copyBtn.textContent = "复制结果"; }, 1200);
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done).catch(function () {
+            toInput.select();
+            document.execCommand("copy");
+            done();
+          });
+        } else {
+          toInput.select();
+          document.execCommand("copy");
+          done();
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

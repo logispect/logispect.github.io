@@ -11,10 +11,11 @@ tools/password.html        ← 密码生成器
 tools/json.html            ← JSON 格式化
 tools/currency.html        ← 汇率转换
 tools/timestamp.html       ← 时间戳互转
+tools/base.html            ← 进制转换
 ads.txt
 ```
 
-旧链接 `#tool-password` / `#tool-json` / `#tool-currency` / `#tool-timestamp` 会在首页自动跳到对应工具页。
+旧链接 `#tool-password` / `#tool-json` / `#tool-currency` / `#tool-timestamp` / `#tool-base` 会在首页自动跳到对应工具页。
 
 ## 本地打开
 

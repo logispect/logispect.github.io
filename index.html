@@ -23,7 +23,9 @@
         "tool-currency": "tools/currency.html",
         "currency": "tools/currency.html",
         "tool-timestamp": "tools/timestamp.html",
-        "timestamp": "tools/timestamp.html"
+        "timestamp": "tools/timestamp.html",
+        "tool-base": "tools/base.html",
+        "base": "tools/base.html"
       };
       var h = (location.hash || "").replace(/^#/, "");
       if (map[h]) location.replace(map[h]);
@@ -93,6 +95,7 @@
         { name: "JSON Formatter", desc: "格式化、压缩与语法校验", cat: "dev", live: true, href: "tools/json.html" },
         { name: "Currency Converter", desc: "汇率换算，牌价本地缓存", cat: "convert", live: true, href: "tools/currency.html" },
         { name: "Timestamp Converter", desc: "按时区互转时间戳与日期", cat: "convert", live: true, href: "tools/timestamp.html" },
+        { name: "Base Converter", desc: "二、八、十、十六进制互转", cat: "convert", live: true, href: "tools/base.html" },
         { name: "Hash Generator", desc: "MD5 / SHA 摘要", cat: "pending" },
         { name: "UUID Generator", desc: "生成唯一标识", cat: "pending" },
         { name: "Password Strength", desc: "评估密码强度", cat: "pending" },
