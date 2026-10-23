@@ -25,7 +25,9 @@
         "tool-timestamp": "tools/timestamp.html",
         "timestamp": "tools/timestamp.html",
         "tool-base": "tools/base.html",
-        "base": "tools/base.html"
+        "base": "tools/base.html",
+        "tool-ice-cream": "games/ice-cream.html",
+        "ice-cream": "games/ice-cream.html"
       };
       var h = (location.hash || "").replace(/^#/, "");
       if (map[h]) location.replace(map[h]);
@@ -73,6 +75,7 @@
         <button type="button" class="filter" data-cat="security">安全</button>
         <button type="button" class="filter" data-cat="dev">开发</button>
         <button type="button" class="filter" data-cat="convert">转换</button>
+        <button type="button" class="filter" data-cat="play">游戏</button>
         <button type="button" class="filter" data-cat="pending">待开发</button>
       </div>
 
@@ -96,6 +99,7 @@
         { name: "Currency Converter", desc: "汇率换算，牌价本地缓存", cat: "convert", live: true, href: "tools/currency.html" },
         { name: "Timestamp Converter", desc: "按时区互转时间戳与日期", cat: "convert", live: true, href: "tools/timestamp.html" },
         { name: "Base Converter", desc: "二、八、十、十六进制互转", cat: "convert", live: true, href: "tools/base.html" },
+        { name: "小小冰淇淋店", desc: "选形状和颜色，可以加好几球", cat: "play", live: true, href: "games/ice-cream.html" },
         { name: "Hash Generator", desc: "MD5 / SHA 摘要", cat: "pending" },
         { name: "UUID Generator", desc: "生成唯一标识", cat: "pending" },
         { name: "Password Strength", desc: "评估密码强度", cat: "pending" },
@@ -118,7 +122,7 @@
         { name: "Image to Base64", desc: "图片转 Data URI", cat: "pending" },
         { name: "Favicon Generator", desc: "生成站点图标", cat: "pending" }
       ];
-      var labels = { security: "安全", dev: "开发", convert: "转换", pending: "待开发" };
+      var labels = { security: "安全", dev: "开发", convert: "转换", play: "游戏", pending: "待开发" };
       var list = document.getElementById("list");
       var empty = document.getElementById("empty");
       var countLabel = document.getElementById("countLabel");
